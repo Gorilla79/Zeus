@@ -1,0 +1,655 @@
+import cv2
+import numpy as np
+import math
+import pyrealsense2.pyrealsense2 as rs
+import argparse  
+import time
+import darknet 
+import socket
+import time
+import pyzbar.pyzbar as pz
+
+
+kernel = np.ones((5, 5), np.uint8)
+dev_SN = []
+dist_to_object = 0
+color_cnt = 0
+box_cnt = 0
+detect_stack = bool
+x_m, y_m = 0, 0
+xmin, ymin = 0, 0
+recive_socket_data = []
+box_socket = True
+ang_cnt = 0
+ang_degree = 0
+used_codes = []
+acc = False # 바코드 while 동작용
+
+def parser():    #                                                                           [데스크탑 환경]
+    parser = argparse.ArgumentParser(description="YOLO Object Detection")
+    parser.add_argument("--input", type=str, default=0,
+                        help="video source. If empty, uses webcam 0 stream")
+    parser.add_argument("--out_filename", type=str, default="",
+                        help="inference video name. Not saved if empty")
+    parser.add_argument("--weights", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/yolov4_box/backup2/yolov4_box_2000.weights",
+                        help="yolo weights path")
+    parser.add_argument("--dont_show", action="store_true",
+                        help="window inference display. For headless systems")
+    parser.add_argument("--ext_output", action="store_true",
+                        help="display bbox coordinates of detected objects")
+    parser.add_argument("--config_file", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/cfg/yolov4_box2.cfg",
+                        help="path to config file")
+    parser.add_argument("--data_file", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/yolov4_box/yolov4_box2.data",
+                        help="path to data file")
+    parser.add_argument("--thresh", type=float, default=.25,
+                        help="remove detections with confidence below this value")
+    return parser.parse_args()
+
+
+''' -->> 데스크탑 환경시 off
+def parser():    #                                                                           [데스크탑 환경]
+    parser = argparse.ArgumentParser(description="YOLO Object Detection")
+    parser.add_argument("--input", type=str, default=0,
+                        help="video source. If empty, uses webcam 0 stream")
+    parser.add_argument("--out_filename", type=str, default="",
+                        help="inference video name. Not saved if empty")
+    parser.add_argument("--weights", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/box_1_2_3_data/backup/box_1_2_3_last.weights",
+                        help="yolo weights path")
+    parser.add_argument("--dont_show", action="store_true",
+                        help="window inference display. For headless systems")
+    parser.add_argument("--ext_output", action="store_true",
+                        help="display bbox coordinates of detected objects")
+    parser.add_argument("--config_file", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/cfg/box_1_2_3.cfg",
+                        help="path to config file")
+    parser.add_argument("--data_file", default="C:/Users/SUBIN/Desktop/yolov3/darknet/temp_build/Debug/box_1_2_3_data/box_1_2_3.data",
+                        help="path to data file")
+    parser.add_argument("--thresh", type=float, default=.25,
+                        help="remove detections with confidence below this value")
+    return parser.parse_args()
+
+def parser():    #                                                                             [노트북 환경]
+    parser = argparse.ArgumentParser(description="YOLO Object Detection")
+    parser.add_argument("--input", type=str, default=0,
+                        help="video source. If empty, uses webcam 0 stream")
+    parser.add_argument("--out_filename", type=str, default="",
+                        help="inference video name. Not saved if empty")
+    parser.add_argument("--weights", default="C:/Users/pooom/Desktop/yolov3/darknet/temp_data/Debug/box_1_2_3_data/backup/box_1_2_3_last.weights",
+                        help="yolo weights path")
+    parser.add_argument("--dont_show", action="store_true",
+                        help="window inference display. For headless systems")
+    parser.add_argument("--ext_output", action="store_true",
+                        help="display bbox coordinates of detected objects")
+    parser.add_argument("--config_file", default="C:/Users/pooom/Desktop/yolov3/darknet/temp_data/Debug/cfg/box_1_2_3.cfg",
+                        help="path to config file")
+    parser.add_argument("--data_file", default="C:/Users/pooom/Desktop/yolov3/darknet/temp_data/Debug/box_1_2_3_data/box_1_2_3.data",
+                        help="path to data file")
+    parser.add_argument("--thresh", type=float, default=.25,
+                        help="remove detections with confidence below this value")
+    return parser.parse_args()
+''' # -->> 노트북 환경시 off
+
+def MouseLeftClick(event, x, y, flags, param):
+	# 왼쪽 마우스가 클릭되면 (x, y) 좌표를 저장한다.
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print('왼쪽 마우스 클릭 했을 때 좌표 : ', x, y)
+
+
+
+def get_device_sequence():
+    DS5_product_ids = ["0AD1", "0AD2", "0AD3", "0AD4", "0AD5", "0AF6", "0AFE", "0AFF", "0B00", "0B01", "0B03", "0B07","0B3A"]
+
+    ctx = rs.context()
+    ds5_dev = rs.device()
+    devices = ctx.query_devices()
+    devs = []
+    for dev in devices:
+        time.sleep(1)
+        if dev.supports(rs.camera_info.product_id) and str(dev.get_info(rs.camera_info.product_id)) in DS5_product_ids:
+            if dev.supports(rs.camera_info.name):
+                dev_SN_int = dev.get_info(rs.camera_info.serial_number)                
+                dev_SN_int = int(dev_SN_int)
+                dev_SN.append(dev_SN_int)
+                print(dev.get_info(rs.camera_info.serial_number))
+    return dev_SN
+
+def nothing(x):
+    pass
+
+parm_top_view = True
+pram_end_effect = False
+
+def move_a(detections):
+    global data_to_send, box_cnt, box_socket, ang_cnt, parm_top_view, pram_end_effect
+
+    if parm_top_view == True :
+        print("parm_top = true")
+        if detections:
+            print("detection = true")
+            data = client_socket.recv(65535) #data 인스턴스 생성 및 수신
+            data = data.decode()  #수신된 byte code를 문자열로 변환
+            print (data) #변환된 문자열을 출력
+            detect_stack = True
+            # x 좌표를 기준으로 정렬
+            #sorted_detections = sorted(detections, key=lambda x: x[2][0], reverse=True)
+            #cnt += 1
+            for detection in detections:
+                class_name = detection[0]
+                print("detect Class")
+
+                if class_name == 'BOX':
+                    box_cnt = box_cnt + 1
+                    print("box_cnt", box_cnt)
+                    bbox = detection[2]
+                    xmin, ymin, xmax, ymax = darknet.bbox2points(bbox)
+                    x_m = (xmin + xmax) / 2
+                    y_m = (ymin + ymax) / 2
+
+                    dist_to_object = aligned_depth_frame.get_distance(int(x_m), int(y_m)) # 측정점 depth
+                    dist_to_object = round(dist_to_object * 100, 3)
+
+                    fps = int(1/(time.time() - prev_time))
+                    depth1 = aligned_depth_frame.get_distance(24, 389)
+                    depth1 = round(depth1 * 100, 3)
+
+                    dx_init ,dy_init, dz_init = rs.rs2_deproject_pixel_to_point(color_intrin_dep, [x_m,y_m], dist_to_object)
+                    dx_a ,dy_a, dz_a = rs.rs2_deproject_pixel_to_point(color_intrin_dep, [309,391], depth1)
+
+                    x_dis = round((dx_a - dx_init) * 10, 2)
+                    y_dis = round(-(dy_a - dy_init + 28.6) * 10, 2)
+
+                    cv2.circle(image, (int(x_m), int(y_m)), 3, (0, 0, 255), -1)      
+                    cv2.putText(image, (str(dist_to_object)), (xmin, ymax - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    cv2.putText(image, (str(x_dis) + '      ' + str(y_dis)), (xmin + 50, ymin - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                    try:
+                        if box_cnt >= 4 or box_socket == True:
+                            #send_socket_top_X(x_dis)
+                            #send_socket_top_Y(y_dis)
+
+                            data_to_send = str(x_dis) + "," +  str(y_dis)
+                            print("data_to_send", data_to_send)
+                            client_socket.sendall(data_to_send.encode())
+                            #time.sleep(1)
+                            #client_socket.sendall(str(y_dis).encode())
+
+                            data = client_socket.recv(65535) #data 인스턴스 생성 및 수신
+                            data = data.decode()  #수신된 byte code를 문자열로 변환
+                            print (data) #변환된 문자열을 출력
+
+                            box_socket = False
+                            box_cnt = 0
+                            time.sleep(1)
+                            parm_top_view = False
+                            pram_end_effect = True
+
+                            #ang_cnt = 0
+                            #detail_coor()     
+                        else:
+                            #box_cnt = 0
+                            #ang_cnt = 0
+                            pass
+                    except RuntimeError as err:
+                        print(err)
+                        pass
+                else:
+                    pass        ## 소켓 통신으로 x_dis 와 y_dis 만 보내면 됨
+        else :
+            detect_stack = False
+            data_all_clear = str('clear')
+            client_socket.sendall(data_all_clear.encode())
+
+            time.sleep(1)
+
+            parm_top_view = False
+            pram_end_effect = False
+            pass
+    else:
+        pass
+
+def detail_coor():
+    global ang_cnt, ang_socket, ang_degree, acc, parm_top_view, pram_end_effect
+
+    if pram_end_effect == True:
+        print("parm_end = true")
+        contours, _ = cv2.findContours(erosion_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:  # 윤곽선이 존재하는 경우
+            print("contours = true")
+            #ang_cnt = ang_cnt + 1
+            ang_socket = True
+            cnt = max(contours, key=cv2.contourArea)
+            #x, y, w, h = cv2.boundingRect(cnt)
+
+            rect = cv2.minAreaRect(cnt)
+            box = cv2.boxPoints(rect)
+            box = np.intp(box)
+            #print(box)
+            #cv2.drawContours(erosion_mask, [box], -1, (0, 255, 0), 3)
+            cv2.polylines(color_image2, [box], True, (0, 0, 255), 3)
+
+            x0 = box[0, 0]
+            x1 = box[1, 0]
+            x2 = box[2, 0]
+            y0 = box[0, 1]
+            y1 = box[1, 1]
+            y2 = box[2, 1]
+
+            x_m2 = int((x0 + x2) / 2)
+            y_m2 = int((y0 + y2) / 2)
+
+            awidth_1 = x1 - x0
+            aheight_1 = y1 - y0
+            awidth_2 = x2 - x1
+            aheight_2 = y2 - y1
+            len_a = math.sqrt((awidth_1 ** 2) + (aheight_1 ** 2))
+            len_b = math.sqrt((awidth_2 ** 2) + (aheight_2 ** 2))
+            '''
+            if len_a > len_b:
+                ang_degree = math.atan((aheight_2) / (awidth_2)) * 180 / 3.141592
+
+            else:
+                ang_degree = math.atan((aheight_1) / (awidth_1)) * 180 / 3.141592
+            ang_degree = round(ang_degree, 2)
+            '''
+            if len_a > len_b and awidth_2 != 0:
+                ang_degree = math.atan(aheight_2 / awidth_2) * 180 / 3.141592
+            elif len_b > 0 and awidth_1 != 0:
+                ang_degree = math.atan(aheight_1 / awidth_1) * 180 / 3.141592
+            else:
+                ang_degree = 0  # 각도를 계산할 수 없는 경우 0으로 설정
+
+            ang_degree = round(ang_degree, 3)
+            if ang_degree > 70:
+                ang_degree = -180 + ang_degree
+            print("ang_degree", ang_degree)
+
+            cv2.putText(color_image2, 'angle =' + str(ang_degree), (40, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.circle(color_image2, (320, 240), 3, (0, 0, 255), -1) 
+            cv2.circle(color_image2, (x_m2, y_m2), 3, (0, 0, 255), -1) 
+
+            dist_to_object_detail = aligned_depth_frame2.get_distance(int(x_m2), int(y_m2)) # 측정점 depth
+            dist_to_object_detail = round(dist_to_object_detail * 100, 3)
+
+            depth_g = aligned_depth_frame2.get_distance(320, 240) ### 그리퍼가 잡아야할 위치
+            depth_g = round(depth_g * 100, 3)
+            #depth2 = aligned_depth_frame.get_distance(x2, y2)
+            #depth3 = aligned_depth_frame.get_distance(x3, y3)
+            dx_detail ,dy_detail, dz_detail = rs.rs2_deproject_pixel_to_point(color_intrin_dep2, [x_m2,y_m2], dist_to_object_detail)
+            dx_b ,dy_b, dz_b = rs.rs2_deproject_pixel_to_point(color_intrin_dep2, [320, 240], depth_g)
+
+            x_dis_b = round((dx_b - dx_detail) * 10, 2)
+            y_dis_b = round(- (dy_b - dy_detail) * 10, 2)
+
+            cv2.putText(color_image2, (str(dist_to_object_detail)), (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(color_image2, (str(x_dis_b) + '      ' + str(y_dis_b)), (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            depth_g = depth_g * 10
+            try:
+                if ang_cnt == 1 : #or ang_socket == True
+                    #send_socket_top_X(x_dis)
+                    #send_socket_top_Y(y_dis)
+
+
+                    data_to_send_2 = str(x_dis_b) + "," +  str(y_dis_b) + "," + str(ang_degree) + "," + str(depth_g)
+                    print(data_to_send_2)
+                    client_socket.sendall(data_to_send_2.encode())
+                    #time.sleep(1)
+                    #client_socket.sendall(str(y_dis).encode())
+
+                    data = client_socket.recv(65535) #data 인스턴스 생성 및 수신
+                    data = data.decode()  #수신된 byte code를 문자열로 변환
+                    print (data) #변환된 문자열을 출력
+
+                    #ang_socket = False
+                    ang_cnt = 0
+                    
+                    time.sleep(1)
+                    parm_top_view = False
+                    pram_end_effect = False
+                    acc = True
+
+                else:
+                    ang_cnt+=1
+                    print(ang_cnt)
+                    pass
+            except RuntimeError as err:
+                print(err)
+                pass   
+        else:
+            pass
+    else:
+        pass
+        
+
+def AddressReader(frame, used_codes):
+    PointAddress = 0
+    for code in pz.decode(frame):
+        my_code = code.data.decode('utf-8')
+        home = my_code.split(',', maxsplit=1)
+        if len(home) >= 2:
+
+            ho = home[1]
+            adho = int(home[1])
+                        
+
+            if my_code not in used_codes:
+                print('┌─────────────────────┐')
+                #print('│        ', end="")
+                print('         ',adho)
+                print('└─────────────────────┘')
+                used_codes.append(my_code)
+                hcnt = True
+                if adho == 2222 :
+                    PointAddress = '2222'
+                elif adho == 601 :
+                    PointAddress = '601'
+                elif adho == 1113 :
+                    PointAddress = '1113'
+                elif adho == 1703 :
+                    PointAddress = '1703'
+            else:
+                '''
+                ┌──────────────────────────────────────────────┐
+                │                 aready exist                 │
+                └──────────────────────────────────────────────┘
+                '''
+                #print("already exist")
+        else:
+            print("바코드 오류")
+
+    return str(PointAddress)
+
+
+
+# trackerbar setting
+#cv2.namedWindow('Threshold Controller')
+#cv2.createTrackbar('value threshold', 'Threshold Controller', 0, 255, nothing)
+#cv2.setTrackbarPos('value threshold', 'Threshold Controller', 90)
+
+
+
+
+
+
+if __name__ == '__main__':
+    
+    recive_socket_data = []         # socket data 초기화
+    print('clear end parameter')
+    time.sleep(1)
+
+    get_device_sequence()
+    dev_SN.sort()
+    first_device, second_device = dev_SN
+    #first_device = dev_SN
+    print('first_device', first_device)
+    print('second_device', second_device)
+
+#############################################################################################
+#######################             camera #1 setting                 #######################
+# Create a pipeline
+    print('set #1 camera')
+    pipeline = rs.pipeline()
+
+# Create a config and configure the pipeline to stream
+#  different resolutions of color and depth streams
+    config = rs.config()
+
+## camera serial number
+    #first_device = str(first_device)
+    #config.enable_device(first_device)
+
+    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+
+# Start streaming
+    profile = pipeline.start(config)
+
+# Create an align object
+# rs.align allows us to perform alignment of depth frames to others frames
+# The "align_to" is the stream type to which we plan to align depth frames.
+    align_to = rs.stream.color
+    align = rs.align(align_to)
+    print('clear #1 camera set')
+    
+    time.sleep(0.5)
+        
+    
+#############################################################################################
+#######################             camera #2 setting                 #######################
+# Create a pipeline
+    print('set #2 camera')
+    pipeline2 = rs.pipeline()
+
+# Create a config and configure the pipeline to stream
+#  different resolutions of color and depth streams
+    config2 = rs.config()
+## camera serial number
+    second_device = str(second_device)
+    config2.enable_device(second_device)
+# 831612071989
+    config2.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    config2.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+
+# Start streaming
+    profile2 = pipeline2.start(config2)
+
+# Create an align object
+# rs.align allows us to perform alignment of depth frames to others frames
+# The "align_to" is the stream type to which we plan to align depth frames.
+    align_to2 = rs.stream.color
+    align2 = rs.align(align_to2)
+    print('clear #2 camera set')
+
+#######################             camera #2 setting                 #######################
+#############################################################################################
+    
+
+    parser()
+    args = parser()
+
+    network, class_names, class_colors = darknet.load_network(
+        args.config_file,
+        args.data_file,
+        args.weights,
+        batch_size=1
+        )
+    
+    
+    width_yolo = 640
+    height_yolo = 480 
+    darknet_image = darknet.make_image(width_yolo, height_yolo, 3)
+
+########################             Server Setting                 ########################
+#############################################################################################
+
+    sever_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # socket() 소켓서버 생성
+    sever_socket.bind(('192.168.0.42',9999)) #서버가 사용할 IP주소와 포트번호를 생성한 소켓에 결합
+    print("1")
+    sever_socket.listen(0) #소켓 서버의 클라이언트의 접속을 기다린다.
+    print("2")
+    client_socket, addr = sever_socket.accept() #요청 수신되면 요청을 받아들여 데이터 통신을 위한 소켓 생성
+
+    try:
+        #data = client_socket.recv(65535) #data 인스턴스 생성 및 수신
+        #data = data.decode()  #수신된 byte code를 문자열로 변환
+        #print (data) #변환된 문자열을 출력
+        #print ('Server Receive Success')
+        time.sleep(1)
+
+        while True:
+            
+            ################################################################################################################
+            ##########################                 #1 Top view camera for position            ##########################
+            #alpa = cv2.getTrackbarPos('value threshold', 'Threshold Controller')
+        # Get frameset of color and depth
+            frames = pipeline.wait_for_frames()
+
+        # Align the depth frame to color frame
+            #print("frame out")
+
+            aligned_frames = align.process(frames)
+
+        # Get aligned frames
+            aligned_depth_frame = aligned_frames.get_depth_frame()  # aligned_depth_frame is a 640x480 depth image
+
+            color_frame = aligned_frames.get_color_frame()
+
+        # Validate that both frames are valid
+            if not aligned_depth_frame or not color_frame:
+                continue
+
+            color_intrin_dep = color_frame.profile.as_video_stream_profile().intrinsics
+
+            depth_image = np.asanyarray(aligned_depth_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+
+        # Yolo Size
+            frame_rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+            
+            frame_resized = cv2.resize(frame_rgb, (width_yolo, height_yolo), interpolation=cv2.INTER_LINEAR)
+            
+            darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
+
+            prev_time = time.time()
+            #print('operate top view time : ', prev_time)
+            detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.7)
+            image = darknet.draw_boxes(detections, frame_resized, class_colors)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+
+            #time.sleep(1)
+            
+
+            ####
+            ################################################################################################################
+            ##########################                    #2 camera hsv color search                  ######################
+            frames2 = pipeline2.wait_for_frames()
+            aligned_frames2 = align2.process(frames2)
+            aligned_depth_frame2 = aligned_frames2.get_depth_frame()   # aligned_depth_frame is a 640x480 depth image
+            color_frame2 = aligned_frames2.get_color_frame()
+            if not aligned_depth_frame2:
+                continue
+            
+            color_intrin_dep2 = color_frame2.profile.as_video_stream_profile().intrinsics
+
+            depth_image2 = np.asanyarray(aligned_depth_frame2.get_data())
+            color_image2 = np.asanyarray(color_frame2.get_data())
+
+            depth_colormap2 = cv2.applyColorMap(cv2.convertScaleAbs(depth_image2, alpha=90 / 255), cv2.COLORMAP_JET)
+            img_hsv = cv2.cvtColor(depth_colormap2, cv2.COLOR_BGR2HSV)
+
+            #cv2.imshow('#2 depth_colormap2', depth_colormap2)
+
+            #cv2.namedWindow('#2 depth_colormap2', cv2.WINDOW_AUTOSIZE)
+            #cv2.imshow('#2 depth_colormap2', depth_colormap2)
+            #cv2.moveWindow('#2 depth_colormap2', 640, 0)
+
+            ROI_depth_colormap = img_hsv[320, 240]
+            one_pixel = np.uint8([ROI_depth_colormap])
+            hsv = one_pixel[0][0]
+            
+            hsv_value = hsv / 10
+            hsv_value = int(hsv_value) * 10
+
+            if hsv_value < 10:
+                lower_color = np.array([hsv_value - 10 + 180, 30, 30])
+                upper_color = np.array([180, 255, 255])
+
+            elif hsv_value > 170:
+                lower_color = np.array([hsv_value, 30, 30])
+                upper_color = np.array([180, 255, 255])
+            else:
+                lower_color = np.array([hsv_value, 30, 30])
+                upper_color = np.array([hsv_value + 10, 255, 255])
+            
+            img_mask = cv2.inRange(img_hsv, lower_color, upper_color)
+
+            erosion_mask = cv2.morphologyEx(img_mask, cv2.MORPH_CLOSE, kernel) # 침식
+
+
+
+            ############
+            # contours, _ = cv2.findContours(alpa, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+            #parm_top_view = True
+            #pram_end_effect = False 
+
+            move_a(detections)
+            time.sleep(4)
+            detail_coor()
+            
+
+            #원래 바코드 있던 자리
+
+
+            cv2.namedWindow('#2 erosion_mask', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('#2 erosion_mask', erosion_mask)
+            cv2.moveWindow('#2 erosion_mask', 0, 480)
+
+            
+            #cv2.imshow('#2 color_image2', color_image2)
+
+            cv2.namedWindow('#2 color_image2', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('#2 color_image2', color_image2)
+            cv2.moveWindow('#2 color_image2', 640, 480)
+
+        # Display the resulting frame
+            #cv2.imshow('frame', image)
+
+            cv2.namedWindow('#1 frame', cv2.WINDOW_AUTOSIZE)
+            cv2.imshow('#1 frame', image)
+            cv2.moveWindow('#1 frame', 0, 0)
+
+            #cv2.setMouseCallback('frame', MouseLeftClick)
+
+
+
+
+            if acc == True :
+                ##################barcode#######################
+                print('barcode')
+                barcode_reader = cv2.VideoCapture(2)
+                barcode_reader.set(3, 640)
+                barcode_reader.set(4, 480)
+                
+                while acc:
+                    success, frame = barcode_reader.read()
+                    if not success:
+                        break  # 프레임을 읽을 수 없으면 루프를 벗어남
+                    address = AddressReader(frame, used_codes)
+                    if address != '0':
+                        client_socket.sendall(address.encode())
+
+                        # parm_again = "again"
+                        # client_socket.sendall(parm_again.encode())
+                        time.sleep(6)
+                        acc = False  # 특정 조건을 충족하면 acc를 False로 변경하여 루프를 벗어남
+                        parm_top_view = True
+                        pram_end_effect = False
+                        box_socket = True
+
+                    cv2.namedWindow('QRcode Barcode Scan', cv2.WINDOW_AUTOSIZE)
+                    cv2.imshow('QRcode Barcode Scan', frame)
+                    cv2.moveWindow('QRcode Barcode Scan', 1280, 120)
+                    key = cv2.waitKey(1)
+                
+                if acc == False :
+                    barcode_reader.release()
+                    cv2.destroyAllWindows()
+                    #acc = True
+                    # 다시 카메라를 켜도록 설정
+                ################################################
+
+
+
+
+
+
+            key = cv2.waitKey(1)
+            # Press esc or 'q' to close the image window
+            if key & 0xFF == ord('q') or key == 27:
+                sever_socket.close() # 소켓통신 종료
+                cv2.destroyAllWindows()
+                break
+
+    finally:
+        pipeline.stop()
+        pipeline2.stop()
