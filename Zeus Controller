@@ -1,0 +1,700 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+## 1. Initial settings① #######################################
+# Import library
+## 1．Initial settings① ①　module import ######################
+from i611_MCS import *
+#from teachdata import *
+from i611_extend import *
+from rbsys import *
+from i611_common import *
+from i611_io import *
+from i611shm import *
+
+count1 = 0
+count2 = 0
+backup = 0
+
+def DHA16_Close():                                                                                                       
+    dout(48,'001') 
+    rb.sleep(0.5)
+    dout(48,'000')                                                                                                      
+                                                                                                                         
+def DHA16_Open():                                                                                                        
+    dout(48,'100') 
+    rb.sleep(0.5) 
+    dout(48,'000')
+
+def move_101ho_down (cnt_101):
+    if(cnt_101 == 1):
+       print('601호 상차')
+       rb.move(j101_3)
+       rb.move(j101_1)
+       DHA16_Open()
+       rb.sleep(1)
+       rb.move(j101_3)
+    elif(cnt_101 == 2):
+        print('601호 2번째 상차')
+        rb.move(j101_3)
+        rb.move(j101_2)
+        DHA16_Open()
+        rb.sleep(1)
+        rb.move(j101_3)
+    else : 
+        pass
+
+def move_102ho_down (cnt_102):
+    if(cnt_102 == 1):
+       print('1113호 상차')
+       rb.move(j102_3)
+       rb.move(j102_1)
+       DHA16_Open()
+       rb.sleep(1)
+       rb.move(j102_3)
+    elif(cnt_102 == 2):
+        print('1113호 2번째 상차')
+        rb.move(j102_3)
+        rb.move(j102_2)
+        DHA16_Open()
+        rb.sleep(1)
+        rb.move(j102_3)
+    else : 
+        pass
+
+def move_103ho_down (cnt_103):
+    if(cnt_103 == 1):
+       print('1703호 상차')
+       rb.move(j103_3)
+       rb.move(j103_1)
+       DHA16_Open()
+       rb.sleep(1)
+       rb.move(j103_3)
+    elif(cnt_103 == 2):
+        print('1703호 2번째 상차')
+        print (cnt_103)
+        rb.move(j103_3)
+        rb.move(j103_2)
+        DHA16_Open()
+        rb.sleep(1)
+        rb.move(j103_3)
+    else : 
+        pass
+
+def move_104ho_down (cnt_104):
+    if(cnt_104 == 1):
+       print('경비실 보관')
+       rb.move(j104_3)
+       rb.move(j104_1)
+       DHA16_Open()
+       rb.sleep(1)
+       rb.move(j104_3)
+    elif(cnt_104 == 2):
+        print('경비실 보관')
+        print (cnt_104)
+        rb.move(j104_3)
+        rb.move(j104_2)
+        DHA16_Open()
+        rb.sleep(1)
+        rb.move(j104_3)
+    else : 
+        pass
+
+def move101_ho_hacha(cnt_hacha_101):
+    global move101_ho_hacha, stack1
+    if(cnt_hacha_101 == 2):
+        rb.move(j101_3)
+        DHA16_Open()
+        rb.move(j101_2) 
+        DHA16_Close()
+        rb.move(j101_3)
+        rb.move(jp101_3)
+        rb.move(jp101_1)
+        DHA16_Open()
+        rb.move(jp101_3)
+        print('601호 2층 하차')
+        rb.move(jwait)
+        cnt_hacha_101 = cnt_hacha_101 - 1
+        stack1 = 1
+
+    if(cnt_hacha_101 == 1):
+        rb.move(j101_3)
+        DHA16_Open()
+        rb.move(j101_1)
+        DHA16_Close()
+        rb.move(j101_3)
+        rb.move(jp101_3) #기존 앞에 내가 박스를 1개 쌓았을 경우
+        if stack1 == 1 :
+            rb.move(jp101_2)
+        else :
+            rb.move(jp101_1)
+        DHA16_Open()
+        rb.move(jp101_3)
+        print('601호 1층 하차')
+        rb.move(jwait)
+        cnt_hacha_101 = cnt_hacha_101 - 1
+    else:
+        pass
+
+def move102_ho_hacha(cnt_hacha_102):
+    global move102_ho_hacha, stack2
+    if(cnt_hacha_102 == 2):
+        rb.move(j102_3)
+        DHA16_Open()
+        rb.move(j102_2)
+        DHA16_Close()
+        rb.move(j102_3)
+        rb.move(jp102_3)
+        rb.move(jp102_1)
+        DHA16_Open()
+        rb.move(jp102_3)
+        rb.move(jwait)
+        print('1703호 2층 하차')
+        cnt_hacha_102 = cnt_hacha_102 - 1
+        stack2 = 1
+    
+    if(cnt_hacha_102 == 1):
+        rb.move(j102_3)
+        DHA16_Open()
+        rb.move(j102_1)
+        DHA16_Close()
+        rb.move(j102_3)
+        rb.move(jp102_3)    #기존 앞에 내가 박스를 1개 쌓았을 경우
+        if stack2 == 1 :
+            rb.move(jp102_2)
+        else :
+            rb.move(jp102_1)
+        DHA16_Open()
+        rb.move(jp102_3)
+        print('1703호 1층 하차')
+        rb.move(jwait)
+        cnt_hacha_102 = cnt_hacha_102 - 1
+    else:
+        pass
+
+def move103_ho_hacha(cnt_hacha_103):
+    global move103_ho_hacha, stack3
+    if(cnt_hacha_103 == 2):
+        rb.move(j103_3)
+        DHA16_Open()
+        rb.move(j103_2)
+        DHA16_Close()
+        rb.move(j103_3)
+        rb.move(jp103_3)
+        rb.move(jp103_1)
+        DHA16_Open()
+        rb.move(jp103_3)
+        rb.move(jwait)
+        print('1113호 2층 하차')
+        cnt_hacha_103 = cnt_hacha_103 - 1
+        stack3 = 1
+    if(cnt_hacha_103 == 1): # 원래 elif
+        rb.move(j103_3)
+        DHA16_Open()
+        rb.move(j103_1)
+        DHA16_Close()
+        rb.move(j103_3)
+        rb.move(jp103_3)    #기존 앞에 내가 박스를 1개 쌓았을 경우
+        if stack3 == 1 :
+            rb.move(jp103_2)
+        else :
+            rb.move(jp103_1)
+        DHA16_Open()
+        rb.move(jp103_3)
+        print('1113호 1층 하차')
+        rb.move(jwait)
+        cnt_hacha_103 = cnt_hacha_103 - 1
+    else:
+        pass    
+
+def main():
+    global count1, count2, backup, trash_1, trash_2, stack1, stack2, stack3, cnt_101, cnt_102, cnt_103, cnt_104, cnt_hacha_101, cnt_hacha_102, cnt_hacha_103
+    global j101_1, j101_2, j101_3, j102_1, j102_2, j102_3, j103_1, j103_2, j103_3, j104_1, j104_2, j104_3, jp101_1, jp101_2, jp101_3, jp102_1, jp102_2, jp102_3, jp103_1, jp103_2, jp103_3, jbacode, jmoving, jwait
+    global clear, clear_max
+    ## 2. Initial settings① ####################################
+    # ZERO robot constructor
+    # Definition of coordinate system
+    # Start connection with robot Initialize
+
+    # Initialization of I/O input/output functions
+
+    # Read teaching data file
+    #data = Teachdata( "teach_data" )
+    ## 1. teach data settings ######################
+    #p1 = Position( -418.30, -398.86, 287.00, 0, 0, -180 )
+    ###### first position #####
+    DHA16_Open()
+
+
+    p1 = Position(92.42, -155.40, 732.34, 0.03, 1.33, 137.01)
+    j1 = Joint(-0.245, -0.328, 24.647, -0.850, 112.681, 88.564)
+
+    ###### second position #####
+
+    ############################
+    p2_ori = Position( 100.95, -468.39, 452.68, -1.06, 0.00, 180 )
+    p2_new = p2_ori.offset(dx =0, dy =0, dz = -100)
+
+
+
+    ############################
+
+    j2 = Joint(0.117, 31.076, 50.536, 0.00, 98.390, 91.187)
+
+    #바코드 인식
+    jbacode = Joint(67.305, -8.954, 122.054, 0.039, 66.669, -23.732)
+
+    #인식 후 대기장소 이동 중간 좌표
+    jb2w = Joint(121.253, -13.456, 108.912, -1.739, 84.450, 106.328)
+
+    #이동중 (자세 불안정 - 보류)
+    jmoving = Joint(91.736, -0.960, 178.663, 0.434, 3.650, 7.132)
+
+    #101동 1층
+    j101_1 = Joint(138.394, 27.402, 123.838, -0.507, 28.313, 47.829)
+    #101동 2층
+    j101_2 = Joint(138.396, 17.341, 117.064, -0.258, 45.243, 47.556)
+    #101동 3층
+    j101_3 = Joint(138.396, 9.756, 106.084, -0.258, 63.932, 47.523)
+
+    #102동 1층
+    j102_1 = Joint(159.518, 55.149, 59.639, -0.555, 64.849, 68.621)
+    #102동 2층
+    j102_2 = Joint(159.519, 51.136, 53.410, -0.555, 74.952, 68.632)
+    #102동 3층
+    j102_3 = Joint(159.532, 49.174, 40.882, -0.555, 89.521, 68.617)
+
+    #103동 1층
+    j103_1 = Joint(179.157, 54.594, 62.479, 0.000, 62.928, 92.587)
+    #103동 2층
+    j103_2 = Joint(179.157, 49.845, 55.626, 0.000, 74.531, 92.587)
+    #103동 3층
+    j103_3 = Joint(179.157, 47.675, 43.200, 0.039, 89.185, 92.635)
+
+    #104동 1층
+    j104_1 = Joint(182.536, 29.209, 123.218, -0.227, 27.421, 91.793)
+    #104동 2층
+    j104_2 = Joint(182.535, 18.673, 116.510, -0.258, 44.651, 91.802)
+    #104동 3층
+    j104_3 = Joint(182.535, 10.574, 105.005, -0.258, 64.258, 91.783)
+
+    #분류 대기 자세
+    jwait = Joint(166.405, 25.623, 60.041, -0.555, 93.961, 75.150)
+
+    #하차장 101동 1층
+    jp101_1 = Joint(71.115, 49.507, 74.292, 0.000, 56.202, 73.015)
+    #하차장 101동 2층
+    jp101_2 = Joint(71.115, 44.177, 68.456, 0.000, 67.368, 73.015)
+    #하차장 101동 3층
+    jp101_3 = Joint(71.115, 40.658, 58.008, 0.000, 81.336, 73.015)
+
+    #하차장 102동 1층
+    jp102_1 = Joint(88.700, 50.007, 73.175, 0.000, 56.819, 91.480)
+    #하차장 102동 2층
+    jp102_2 = Joint(88.523, 44.465, 67.883, 0.000, 67.653, 90.423)
+    #하차장 102동 3층
+    jp102_3 = Joint(88.523, 40.985, 57.368, 0.000, 81.649, 90.423)
+
+    #하차장 103동 1층
+    jp103_1 = Joint(105.414, 57.036, 56.840, 0.000, 66.125, 108.194)
+    #하차장 103동 2층
+    jp103_2 = Joint(105.192, 52.601, 49.513, -2.631, 78.191, 108.716)
+    #하차장 103동 3층
+    jp103_3 = Joint(105.193, 51.263, 35.337, -0.258, 93.671, 108.684)
+
+    #경비실 -> 104동으로 사용
+    #jh = Joint()
+
+    p2 = rb.Joint2Position(j2)
+    p2 = p2.offset(dx =0, dy =0, dz = -50)
+    #print('2',p2)
+    ## 2. motion condition settings ########################
+    m = MotionParam( jnt_speed=30, lin_speed=50, pose_speed=30, overlap = 100 )
+    #MotionParam, type -> motion condition settings
+    rb.motionparam( m )
+    
+    Socket_data_1  = None
+    Socket_data_2  = None
+    Socket_data_x = 0  # 초기화
+    Socket_data_y = 0  # 초기화
+    Socket_detail_x = 0  # 초기화
+    Socket_detail_y = 0  # 초기화
+    Socket_detail_z = 0  # 초기화
+    Socket_detail_ang = 0  # 초기화
+    #print('Socket_data_1 : ',Socket_data_1)
+    #print('Socket_data_2 : ',Socket_data_2)
+    #print('count1', count1)
+    print('Loding ㆍ ㆍ ㆍ ㆍ ㆍ')
+
+    '''
+    if count1 == 1 :
+        Socket_data_da = sock.recv(1024)
+        print('soket_data_da : ',Socket_data_da)
+        Socket_data_1 = sock.recv(1024)
+        print('soket_data_1 : ',Socket_data_1)
+        backup = Socket_data_1
+        trash_1 = Socket_data_1.split(",")
+        trash_2 = Socket_data_da.split(",")
+        if len(trash_1) > len(trash_2) :
+            backup = Socket_data_da
+        else:
+            backup = Socket_data_1
+    if count1 > 1 :
+        Socket_data_1 = sock.recv(1024)
+        backup = Socket_data_1
+    '''
+    ## 3. define robot movements ##############################
+    # start work
+    #Socket_data_1 = 'go' #Create data instance
+    #Socket_data_1 = Socket_data_1.encode() # Convert Unicode to byte code in utf-8, euc-kr, and ascii formats
+    #sock.send(Socket_data_1.encode()) #data send
+    #Socket_data_1 = backup
+    #sock.send("p1".encode())
+    rb.move(j1)
+
+    #rb.sleep(1)
+    Socket_data_1 = 'go' #Create data instance
+    Socket_data_1 = Socket_data_1.encode() # Convert Unicode to byte code in utf-8, euc-kr, and ascii formats
+    sock.send(Socket_data_1.encode()) #data send
+    #Socket_data_1 = backup
+    
+    #print('socket 1')
+    '''
+    if count1 == 0 :
+        Socket_data_1 = sock.recv(1024) #Receive data from server socket
+        print('1')
+        Socket_data_1 = Socket_data_1.decode() #byte code -> string type
+        print('2')
+    '''
+    Socket_data_1 = sock.recv(1024) #Receive data from server socket
+    #print('1')
+    Socket_data_1 = Socket_data_1.decode() #byte code -> string type
+    #print('2')
+
+    #time.sleep(1)
+    #Socket_data = sock.recv(65535) #Receive data from server socket
+    #Socket_data= Socket_data.decode() #byte code -> string type
+    #Socket_data_li = []
+    #Socket_data_li.append(Socket_data)
+
+    #############################################################
+    # if 로 x, y 값과 'clear' 문자욜 구분해야함 (여기)
+    #############################################################
+
+    #val = Socket_data_recv.split("a")
+    #print(val)
+    #val = val[-2]
+    #print(val)
+    #print('whuy', Socket_data_1)
+    val = Socket_data_1.split(",")
+    #print('val_len', len(val))
+    if len(val) == 2:
+        Socket_data_x = format(round(float(val[0]),3))
+        Socket_data_y = format(round(float(val[1]),3))
+    
+    print('Socket_data_x : ', Socket_data_x, 'Socket_data_y : ', Socket_data_y) #Converted string output
+
+    
+    
+    #print(Socket_data_x, Socket_data_y) #Converted string output
+
+    #print Socket_data_y #Converted string output
+    #rb.sleep(1)
+
+    rb.move(j2)
+
+    #rb.sleep(1)
+
+
+
+    #rb.use_mt(True)
+    p3 = p2.replace(x = Socket_data_x, y = Socket_data_y , z = 315)
+    Socket_data_x, Socket_data_y = 0, 0 
+    p4 = p3.offset(dx = - 30, dy = 88.17)
+    sock.send('stop'.encode())
+    rb.move(p4)
+
+    Socket_data_2 = 'start_2' #Create data instance
+    Socket_data_2 = Socket_data_2.encode() # Convert Unicode to byte code in utf-8, euc-kr, and ascii formats
+    sock.send(Socket_data_2.encode()) #data send
+
+    #print('0')
+    print('Loding ㆍ ㆍ ㆍ ㆍ ㆍ')
+    '''
+    if count2 == 0 :
+        Socket_data_2 = sock.recv(1024) #Receive data from server socket
+        #Socket_data_ra = sock.recv(1024) # 지운 부분 나중에 살려
+        print('Socket_data_2',Socket_data_2)
+        #print('Socket_data_ra',Socket_data_ra) # 지운 부분 나중에 살려
+        #Socket_data_2 = 0 # 지운 부분 나중에 살려
+        #Socket_data_2 = Socket_data_ra # 지운 부분 나중에 살려
+    else :
+        Socket_data_2 = sock.recv(1024)
+        Socket_data_ra = sock.recv(1024)
+        print('Socket_data_2',Socket_data_2)
+        print('Socket_data_ra',Socket_data_ra)
+        Socket_data_2 = 0
+        Socket_data_2 = Socket_data_ra
+    '''
+    Socket_data_2 = sock.recv(1024) #Receive data from server socket
+    #Socket_data_ra = sock.recv(1024) # 지운 부분 나중에 살려
+    #print('Socket_data_2',Socket_data_2)
+    #print('Socket_data_ra',Socket_data_ra) # 지운 부분 나중에 살려
+    #Socket_data_2 = 0 # 지운 부분 나중에 살려
+    #Socket_data_2 = Socket_data_ra # 지운 부분 나중에 살려
+
+    #print('1')
+    Socket_data_2 = Socket_data_2.decode() #byte code -> string type
+    #print('2')
+    #print(len(Socket_data_2))
+    #print(Socket_data_2)
+    #time.sleep(1)
+    #Socket_data = sock.recv(65535) #Receive data from server socket
+    #Socket_data= Socket_data.decode() #byte code -> string type
+    #Socket_data_li = []
+    #Socket_data_li.append(Socket_data)
+
+    
+    #val = Socket_data_recv.split("a")
+    #print(val)
+    #val = val[-2]
+    #print(val)
+    val_2 = Socket_data_2.split(",")
+    #print('val_2',len(val_2))
+
+    if len(val_2) == 4:
+        Socket_detail_x = format(round(float(val_2[0]),3))
+        Socket_detail_y = format(round(float(val_2[1]),3))
+        Socket_detail_ang = format(round(float(val_2[2]),3))
+        Socket_detail_z = format(round(float(val_2[3]),3))
+    
+    print('x_detail : ', Socket_detail_x, 'y_detail : ', Socket_detail_y, 'depth : ', Socket_detail_z, 'angle : ', Socket_detail_ang) #Converted string output
+
+    #rb.sleep(5)
+    p5 = p3.offset(dx = Socket_detail_x, dy = Socket_detail_y)
+    j5 = rb.Position2Joint(p5)
+
+    
+    #print(j5)
+    #print(type(j5))
+
+    j5poff = j5.offset(dj6 = Socket_detail_ang)
+    rb.move(p5)
+    rb.move(j5poff)
+    p5_b = rb.Joint2Position(j5poff)
+    p6 = p5_b.offset(dz = - float(Socket_detail_z)+120)
+    #p6 = p3.offset(dx = Socket_detail_x, dy = Socket_detail_y, dz = - float(Socket_detail_z) + 80)
+
+    rb.move(p6)
+    rb.sleep(1)
+
+    DHA16_Close()
+    rb.sleep(1)
+    rb.move(p5_b, jbacode)
+    #rb.sleep(1)
+    #바코드 인식 후 대기장소로 곡선 이동
+
+    #rb.move(jbacode)
+    #rb.sleep(3)
+    print('Bacord Loding ㆍ ㆍ ㆍ ㆍ ㆍ')
+    add = sock.recv(1024)
+    '''
+    print('┌─────────────────────┐')
+    print('│                     │')
+    if add == '2222' :
+        print('         경비실')
+    else :
+        print('         ',add)
+    print('│                     │')
+    print('└─────────────────────┘')
+    '''
+    
+    ##################################################
+    ##############       cut       ###################
+    
+    rb.asyncm(1)
+    rb.move(jb2w, jwait)
+    rb.join()
+    rb.asyncm(2)
+    rb.sleep(1)
+
+    m = MotionParam( jnt_speed=80, lin_speed=80, pose_speed=80, overlap = 100 )
+    #MotionParam, type -> motion condition settings
+    rb.motionparam( m )
+
+    #상차
+    if(add == '1703'):
+        cnt_103 = cnt_103 + 1
+        print(' ')
+        print(' ')
+        print('┌─────────────────────┐')
+        print('│                     │')
+        print('│        Area3        │')
+        print('│                     │')
+        print('└─────────────────────┘')
+        print(' ')
+        print(' ')
+        #print('cnt_1703',cnt_103)
+        move_103ho_down(cnt_103) 
+        cnt_hacha_103 = cnt_hacha_103 + 1
+    elif(add == '1113'):
+        cnt_102 = cnt_102 + 1
+        print(' ')
+        print(' ')
+        print('┌─────────────────────┐')
+        print('│                     │')
+        print('│        Area2        │')
+        print('│                     │')
+        print('└─────────────────────┘')
+        print(' ')
+        print(' ')
+        #print('cnt_1113',cnt_102)
+        move_102ho_down(cnt_102)
+        cnt_hacha_102 = cnt_hacha_102 + 1
+    elif(add == '601'):
+        cnt_101 = cnt_101 + 1
+        print(' ')
+        print(' ')
+        print('┌─────────────────────┐')
+        print('│                     │')
+        print('│        Area1        │')
+        print('│                     │')
+        print('└─────────────────────┘')
+        print(' ')
+        print(' ')
+        #print('cnt_601',cnt_101)
+        move_101ho_down(cnt_101)
+        cnt_hacha_101 = cnt_hacha_101 + 1
+    else :
+        cnt_104 = cnt_104 + 1
+        print(' ')
+        print(' ')
+        print('┌─────────────────────┐')
+        print('│                     │')
+        print('│      Security       │')
+        print('│                     │')
+        print('└─────────────────────┘')
+        print(' ')
+        print(' ')
+        #print('cnt_경비실',cnt_104)
+        move_104ho_down(cnt_104) 
+
+    '''
+    if(add == '1113'):
+        cnt_102 = cnt_102 + 1
+        print('cnt_102',cnt_102)
+        move_102ho_down(cnt_102)
+        cnt_hacha_102 = cnt_hacha_102 + 1
+    else :
+        cnt_104 = cnt_104 + 1
+        print('cnt_104',cnt_104)
+        move_104ho_down(cnt_104) 
+    
+    if(add == '601'):
+        cnt_101 = cnt_101 + 1
+        print('cnt_101',cnt_101)
+        move_101ho_down(cnt_101)
+        cnt_hacha_101 = cnt_hacha_101 + 1
+    else :
+        cnt_104 = cnt_104 + 1
+        print('cnt_104',cnt_104)
+        move_104ho_down(cnt_104) 
+    '''
+      
+    '''
+    #해당 동 이동(ex. 103동)
+    rb.move(j103_3)
+    rb.line(j103_1)
+
+    #물건 놓고 대기 자세로 (추후 박스가 남아있는 신호를 받으면 p2지점으로 이동)
+    DHA16_Open()
+    rb.sleep(1)
+    rb.line(j103_3)
+    rb.move(jwait)
+    rb.sleep(1)
+
+    #하차장 이동
+    #하차
+
+    #해당 동 이동(ex. 103동)
+    rb.move(j103_3)
+    rb.sleep(1)
+    rb.line(j103_1)
+    
+    #물건 잡고 하차장으로 이동
+    DHA16_Close()
+    rb.sleep(1)
+    rb.line(j103_3)
+    rb.line(jp103_3)
+    rb.line(jp103_2)
+
+    #물건 하차
+    DHA16_Open()
+
+    #원점 이동
+    rb.line(jp103_3)
+    '''
+        
+    # print('11111')
+    # Socket_data_1 = sock.recv(65535)
+    # print('22222')
+    # print(Socket_data_1)
+    # print('333333')
+
+    #sock.send('go')
+    m = MotionParam( jnt_speed=50, lin_speed=50, pose_speed=50, overlap = 100 )
+    #MotionParam, type -> motion condition settings
+    rb.motionparam( m )
+    count1 = count1 + 1
+    clear = clear + 1
+
+     #잡을 물건이 없을 경우
+    if(clear == clear_max) :
+        print('AMR 이동중-')
+        rb.move(jwait)
+        rb.home()
+        rb.move(jmoving)
+        rb.sleep(5) #이동중\
+        rb.asyncm(1)
+        rb.move(jmoving, jwait)
+        rb.join()
+        rb.asyncm(2)
+
+        #물건 하차
+        move101_ho_hacha(cnt_hacha_101)
+        move102_ho_hacha(cnt_hacha_102)
+        move103_ho_hacha(cnt_hacha_103)
+        rb.home()
+        rb.close()
+    
+    else :
+        pass
+    #count2 = count2 + 1 # 나중에 지울것
+    
+    
+
+    # Socket_data1 = sock.recv(65535).decode()  # 데이터를 받고 문자열로 디코딩
+    # print(Socket_data1)
+
+    ## 4. end ######################################
+    # Terminate connection with robot
+
+if __name__ == '__main__':
+    rb = i611Robot()
+    _BASE = Base()
+    IOinit( rb )
+    rb.open()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #INET : address family's base value, SOCK_STREAM : base value of socket type
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1) #(level, optname, value: int) got socket value settings
+    sock.connect(('192.168.0.42',9999)) #Connect to remote socket at address
+    cnt_101, cnt_102, cnt_103, cnt_104 = 0, 0, 0, 0
+    cnt_hacha_101, cnt_hacha_102, cnt_hacha_103 = 0, 0, 0
+    stack1, stack2, stack3 = 0, 0, 0
+    clear_max = int(input('box count: '))
+    clear = 0
+    rb.home()
+    while True :
+        main()
+        if (clear == clear_max) : 
+            print('띵동-! 택배 하차 끝!')
+            print('이제 경비실로 이동!!')
+            break
