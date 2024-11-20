@@ -10,7 +10,7 @@
 
 ## 실행 계획 및 단계
 
-![image01.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/7e764a09-a1b6-4cd3-a50f-53cd47b67b70/daa2503a-3b9d-4b4e-b8af-98a1e7f9da26/image01.png)
+![image01](https://github.com/user-attachments/assets/5e01b774-33ae-49a3-a3ae-7d85da639e19)
 
 전체적인 실행 계획의 공간은 그림 3과 같이 구성
 
